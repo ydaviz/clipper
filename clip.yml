@@ -1,0 +1,44 @@
+name: Clips erstellen
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Link zum Stream-Video (Twitch-VOD oder YouTube)
+        required: true
+      count:
+        description: Anzahl Clips
+        default: "5"
+      length:
+        description: Länge pro Clip in Sekunden
+        default: "45"
+      vertical:
+        description: Hochformat 9:16 (true/false)
+        default: "false"
+
+permissions:
+  contents: write
+
+jobs:
+  clip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      VOD_URL: ${{ inputs.url }}
+      CLIP_COUNT: ${{ inputs.count }}
+      CLIP_LEN: ${{ inputs.length }}
+      VERTICAL: ${{ inputs.vertical }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -U yt-dlp numpy
+      - run: python scripts/clip.py
+      - name: Clips als Release veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "clips-${{ github.run_id }}" out/*.mp4 \
+            --title "Clips $(date +'%d.%m.%Y %H:%M')" \
+            --notes "Quelle: $VOD_URL"
